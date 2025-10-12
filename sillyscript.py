@@ -118,8 +118,8 @@ print(colors.red+"Misses: "+str(len(source_files))+colors.reset)
 print("Now Packing the resourcepack..")
 
 texpack = zipfile.ZipFile(texpack_name+".zip",'w')
-texpack.write('rsp_dat/pack.mcmeta')
-texpack.write('rsp_dat/pack.png')
+texpack.write('rsp_dat/pack.mcmeta', 'pack.mcmeta')
+texpack.write('rsp_dat/pack.png', 'pack.png')
 texpack.write('assets')
 for file in resourcepack_directory.rglob('**/*'):
     if file.suffix != 'target':
