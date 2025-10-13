@@ -66,8 +66,7 @@ for file in targets_directory.rglob('**/*'):
         delete = False
     
     file_name = file.name
-    file_stem = file_name.split('.')[0]
-    file_extension = file_name.split('.')[-1]
+    file_stem, *_, file_extension = file_name.split('.')
     if file_extension in whitelist_extension: delete = False
     if file_extension in target_extension: 
         new_file = file.parent / f"{file.stem}.target"
