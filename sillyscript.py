@@ -94,8 +94,9 @@ source_files = {}
 print("Gathering Source Files")
 for file in source_directory.rglob('**/*'):
     if not file.is_dir():
-        if file.stem in source_files: source_files[file.stem] += [file]
-        else: source_files[file.stem] = [file]
+        #if file.stem in source_files: source_files[file.stem] += [file]
+        #else: source_files[file.stem] = [file]
+        source_files[file.stem] = source_files.get(file.stem,[]) + [file]
 
 print("Shooting Source Files against Targets!")
 hits = 0 
