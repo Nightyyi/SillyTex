@@ -13,6 +13,7 @@ whitelist_extension = ['py','target']
 # generate a target if the file extension is..
 target_extension = ['png']
 
+find_max_suggestions = 5
 
 repositories = ["https://github.com/GregTech-Odyssey/GTOCore",
                 "https://github.com/GregTech-Odyssey/GregTech-Modern"]
@@ -48,8 +49,59 @@ targets that are missing targets
 \"py sillyscript.py -f\"""")
 
 
+class Item:
+    def __init__(self, value, string):
+        self.v = value
+        self.str = string
+    
+    def __str__(self):
+        return "item " + str(self.v) +" "+ str(self.str)
+    
+
+class Itemsort:
+    def __init__(self, value, string):
+        self.items = []
+        for index,string in enumerate(string):
+            new_item = Item(value[index],string)
+            self.items.append(new_item)
 
 
+    def sort(self):
+        return self.quick_sort(self.items)
+
+    def quick_sort(self, arr, depth=0):
+        if len(arr) <= 1:
+            return arr, depth+1
+        mid = len(arr)//2 
+        mid_item = arr[mid]
+        arr.pop(mid)
+        lower = []
+        higher = []
+        lows = 0
+        highs = 0
+        for item in arr:
+            if mid_item.v > item.v:
+                lower.append(item)
+                lows  += 1
+            else:
+                higher.append(item)
+                highs +=1
+        print(depth, len(arr), lows, highs)
+
+        if lows == 0:
+            return lower+[mid_item]+higher, depth+1
+
+        if highs == 0:
+            return lower+[mid_item]+higher, depth+1
+
+
+        lower, depth_1 = self.quick_sort(lower,depth) 
+        higher, depth_2 = self.quick_sort(higher,depth)
+        if depth_1 >= depth_2:
+            depth = depth_1 
+        else: 
+            depth = depth_2
+        return lower+[mid_item]+higher, depth+1
 
 
 class colors:
@@ -58,6 +110,10 @@ class colors:
     yellow = '\x1b[33m'
     blue = '\x1b[34m'
     reset = '\x1b[0m'
+
+
+
+
 def PULL_phase():
     print("Creating your texturepack!")
     print("Pull Phase.. getting asset directories.")
@@ -176,6 +232,73 @@ def ZIP_phase():
     texpack.close()
 
 
+def COMPARE(source, targets_list):
+    targets: list[set[str]] = []
+    for target in targets_list:
+        targets.append({*(target.split("_"))})
+
+    source_keywords: set[str] = {*(source.split("_"))}
+    
+    target_score = []
+
+    for target in targets:
+        score = 0
+        for target_keyword in target:
+            if target_keyword in [*source_keywords]:
+                score +=1 
+        target_score.append(score)
+   
+    isort = Itemsort(target_score, targets_list) 
+    isort.sort()
+    val = 0
+    count = 0
+    for item in (isort.items):
+        val = item.v
+        if item.v > 0:
+            print(str(item.v)+" S - ", item.str)
+            count += 1
+            if count > find_max_suggestions:
+                break
+
+
+def FIND_cmd():
+    print("Finding matches..") 
+    resourcepack_directory = pl.Path("assets/")
+    source_directory = pl.Path("source/")
+    # get source first
+    source_files = {}
+    target_files = {}
+
+    print("Gathering Source Files")
+    for file in source_directory.rglob('**/*'):
+        if not file.is_dir():
+            #if file.stem in source_files: source_files[file.stem] += [file]
+            #else: source_files[file.stem] = [file]
+            source_files[file.stem] = source_files.get(file.stem,[]) + [file]
+
+    print("Shooting Source Files against Targets!")
+    hits = 0 
+    for file in resourcepack_directory.rglob('**/*'):
+        if not file.is_dir():
+            if file.stem in source_files:
+                for source_file in source_files[file.stem]:
+                    del source_files[file.stem]
+                    hits += 1
+            else:
+                target_files[file.stem] = target_files.get(file.stem,[]) + [file]
+    
+    print(colors.green+"Hits: "+str(hits)              + colors.reset)
+    print(colors.red+"Misses: "+str(len(source_files)) + colors.reset + '\n')
+
+    if len(source_files) > 0:
+        for missing in source_files:
+            print(colors.red+missing+colors.reset)
+
+    print("\nUnhit targets: "+str(len(target_files)))
+
+    if len(source_files) > 0:
+        for missing in source_files:
+            COMPARE(missing, target_files)
 
 normal_run = not (args.pull or args.target or args.build or args.zip or args.find or args.idk)
 
@@ -190,3 +313,5 @@ if args.target: TARGET_phase()
 if args.build: BUILD_phase()
 if args.zip: ZIP_phase()
 if args.idk: HELP_cmd()
+if args.find: FIND_cmd()
+
