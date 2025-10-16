@@ -221,7 +221,7 @@ def BUILD_phase():
 def ZIP_phase():
     print("Now Packing the resourcepack..")
     resourcepack_directory = pl.Path("assets/")
-    texpack = zipfile.ZipFile(texpack_name,'w')
+    texpack = zipfile.ZipFile(texpack_name+".zip",'w')
     texpack.write('rsp_dat/pack.mcmeta', 'pack.mcmeta')
     texpack.write('rsp_dat/pack.png', 'pack.png')
     texpack.write('assets')
