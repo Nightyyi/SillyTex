@@ -1,0 +1,2 @@
+- name: Release with commit
+  uses: ChanTsune/release-with-commit@v3.0.0
