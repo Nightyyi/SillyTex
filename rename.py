@@ -16,6 +16,7 @@ args = parser.parse_args()
 path = pl.Path(args.folder) 
 
 size_count = {}
+files_list = {}
 
 for file in path.rglob('**/*'):
     if not file.is_dir():
@@ -31,8 +32,20 @@ for file in path.rglob('**/*'):
                 subfolder = "x"+str(img.size[0]) +"_y"+ str(img.size[1])
             key = str(size[0])+"-"+str(size[1])
             count = size_count.get(key,0) 
-            dest = "renamed/"+size+"texture_"+str(count)+".aseprite"
+            dest_folder = pl.Path("renamed/"+subfolder)
+            if not dest_folder.is_dir(): 
+                dest_folder.mkdir()
+
+            dest = "renamed/"+subfolder+"/texture_"+str(count)+".aseprite"
             shutil.copyfile(src=file, dst= dest)
             print(file.name," -> ",str(count)+"-texture")
-            count[key] = count + 1
+            ref_line = str(count)+" - '"+file.stem+"'\n"
+            files_list[size] = files_list.get(size,"")+ref_line
+            size_count[key] = count + 1
+    
+for key in files_list:
+    subfolder = "x"+str(key[0]) +"_y"+ str(key[1])
+    with open('renamed/'+subfolder+"/ref.txt",'w') as ref_file:
+        ref_file.write(files_list[key])
+
 
