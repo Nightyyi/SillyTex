@@ -1,4 +1,4 @@
-import subprocess, argparse, shutil, time, os, ctypes, zipfile
+import subprocess, argparse, shutil, time, os, ctypes, zipfile, math
 import pathlib as pl
 
 texpack_name = "SillyTex"
@@ -8,12 +8,18 @@ ctypes.windll.kernel32.SetConsoleMode(
   7  # this enables VT processing
 )
 
-# anything with a file extension with this list
+
+# whitelist anything with a file extension within this list
+source_file_whitelist_extension = ['.png']
+# anything with a file extension within this list
 whitelist_extension = ['py','target']
 # generate a target if the file extension is..
 target_extension = ['png']
 
 find_max_suggestions = 5
+GLOBAL_PROGRESS_BAR_PRECISION = 6 
+GLOBAL_PROGRESS_BAR_SIZE = 30 #characters
+
 
 repositories = ["https://github.com/GregTech-Odyssey/GTOCore",
                 "https://github.com/GregTech-Odyssey/GregTech-Modern"]
@@ -48,6 +54,33 @@ targets that are missing targets
 
 \"py sillyscript.py -f\"""")
 
+def list_pull(iterable):
+    accumil = []
+    for x in iterable:
+        accumil.append(x)
+    return accumil
+
+def ProgressBar(iterable, length = None):
+    if length is None:
+        count_max = len(iterable)
+    else:
+        count_max = length
+    count_max -=1
+    count = 0
+    start = time.perf_counter_ns()
+    for x in iterable:
+        ratio = count/count_max
+        size = GLOBAL_PROGRESS_BAR_SIZE
+        time_since_start = (time.perf_counter_ns()-start)/1_000_000_000
+        str_1 = "["+"#"*math.floor(ratio*size)+" "*(size-math.floor(ratio*size))+"]  "
+        str_2 = f'{ratio:.2%}'
+        str_3 = "   "+f'{time_since_start:.4f}s'
+        print("\r",end="",flush=True)
+        print(str_1+str_2+str_3,end="",flush=True)
+        count += 1 
+
+        yield x
+    print("")
 
 class Item:
     def __init__(self, value, string):
@@ -112,8 +145,6 @@ class colors:
     reset = '\x1b[0m'
 
 
-
-
 def PULL_phase():
     print("Creating your texturepack!")
     print("Pull Phase.. getting asset directories.")
@@ -154,7 +185,8 @@ def TARGET_phase():
     dir_c = 0 
     del_c = 0 
     made_c = 0
-    for file in targets_directory.rglob('**/*'):
+    flist = list_pull(targets_directory.rglob('**/*')) 
+    for file in ProgressBar(flist):
         file_c +=1 
         delete = True
         if file.is_dir(): 
@@ -191,15 +223,18 @@ def BUILD_phase():
     target_files = {}
 
     print("Gathering Source Files")
-    for file in source_directory.rglob('**/*'):
+    flist = list_pull(source_directory.rglob('**/*')) 
+    for file in ProgressBar(flist):
         if not file.is_dir():
-            #if file.stem in source_files: source_files[file.stem] += [file]
-            #else: source_files[file.stem] = [file]
-            source_files[file.stem] = source_files.get(file.stem,[]) + [file]
+            if file.suffix in source_file_whitelist_extension:
+                #if file.stem in source_files: source_files[file.stem] += [file]
+                #else: source_files[file.stem] = [file]
+                source_files[file.stem] = source_files.get(file.stem,[]) + [file]
 
     print("Shooting Source Files against Targets!")
     hits = 0 
-    for file in resourcepack_directory.rglob('**/*'):
+    flist = list_pull(resourcepack_directory.rglob('**/*')) 
+    for file in ProgressBar(flist):
         if not file.is_dir():
             if file.stem in source_files:
                 for source_file in source_files[file.stem]:
@@ -214,6 +249,25 @@ def BUILD_phase():
         for missing in source_files:
             print(colors.red+missing+colors.reset)
 
+        delete = False
+        while True:
+            out = input("Do you want to delete missed source files? permanently! (y/N)\n")
+            out = out.lower()
+            if out == "y":
+                delete = True
+                break
+            elif out == "n":
+                break
+            elif out == "":
+                print("Defaulted (N)",end="\n\n")
+                break
+            else:
+                print("Invalid")
+        if delete:
+            for missing in source_files:
+                for file in source_files[missing]:
+                    file.unlink()
+
     print(colors.green+"Hits: "+str(hits)              + colors.reset)
     print(colors.red+"Misses: "+str(len(source_files)) + colors.reset)
 
@@ -225,7 +279,8 @@ def ZIP_phase():
     texpack.write('rsp_dat/pack.mcmeta', 'pack.mcmeta')
     texpack.write('rsp_dat/pack.png', 'pack.png')
     texpack.write('assets')
-    for file in resourcepack_directory.rglob('**/*'):
+    flist = list_pull(resourcepack_directory.rglob('**/*')) 
+    for file in ProgressBar(flist):
         if file.suffix != 'target':
             texpack.write(file)
     print("Done.")
