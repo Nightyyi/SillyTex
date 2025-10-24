@@ -17,9 +17,8 @@ whitelist_extension = ['py','target']
 target_extension = ['png']
 
 find_max_suggestions = 5
-GLOBAL_PROGRESS_BAR_PRECISION = 6 
+GLOBAL_PROGRESS_BAR_PRECISION = 4 
 GLOBAL_PROGRESS_BAR_SIZE = 30 #characters
-
 
 repositories = ["https://github.com/GregTech-Odyssey/GTOCore",
                 "https://github.com/GregTech-Odyssey/GregTech-Modern"]
@@ -68,18 +67,35 @@ def ProgressBar(iterable, length = None):
     count_max -=1
     count = 0
     start = time.perf_counter_ns()
+    time_since_start = 0
     for x in iterable:
         ratio = count/count_max
         size = GLOBAL_PROGRESS_BAR_SIZE
         time_since_start = (time.perf_counter_ns()-start)/1_000_000_000
+        if ratio != 0:
+            ETA = time_since_start*(1/ratio)
+        else:
+            ETA = 0
+        str_0 = colors.red 
+        if ratio > 1/3: 
+            str_0 = colors.yellow
+        if ratio > 2/3:
+            str_0 = colors.green 
+        if ratio == 1: 
+            str_0 = colors.cyan
         str_1 = "["+"#"*math.floor(ratio*size)+" "*(size-math.floor(ratio*size))+"]  "
         str_2 = f'{ratio:.2%}'
-        str_3 = "   "+f'{time_since_start:.4f}s'
+        str_3 = colors.blue+"   "+f'{time_since_start:.4f}s'
+        str_4 = colors.magenta+"   ETA:"+f'{ETA:.4f}s'+colors.reset
         print("\r",end="",flush=True)
-        print(str_1+str_2+str_3,end="",flush=True)
+        print(str_0+str_1+str_2+str_3+str_4,end="",flush=True)
         count += 1 
 
         yield x
+    
+    print("\r"+" "*100,end="",flush=True)
+    print("\r",end="",flush=True)
+    print(colors.magenta+"Took:"+f'{time_since_start:.4f}s',end="",flush=True)
     print("")
 
 class Item:
@@ -142,6 +158,8 @@ class colors:
     green = '\x1b[32m'
     yellow = '\x1b[33m'
     blue = '\x1b[34m'
+    magenta = '\x1b[35m'
+    cyan = '\x1b[36m'
     reset = '\x1b[0m'
 
 
@@ -283,38 +301,35 @@ def ZIP_phase():
     for file in ProgressBar(flist):
         if file.suffix != 'target':
             texpack.write(file)
-    print("Done.")
     texpack.close()
 
 
-def COMPARE(source, targets_list):
-    targets: list[set[str]] = []
-    for target in targets_list:
-        targets.append({*(target.split("_"))})
-
-    source_keywords: set[str] = {*(source.split("_"))}
-    
-    target_score = []
-
-    for target in targets:
-        score = 0
-        for target_keyword in target:
-            if target_keyword in [*source_keywords]:
-                score +=1 
-        target_score.append(score)
-   
-    isort = Itemsort(target_score, targets_list) 
-    isort.sort()
-    val = 0
-    count = 0
-    for item in (isort.items):
-        val = item.v
-        if item.v > 0:
-            print(str(item.v)+" S - ", item.str)
-            count += 1
-            if count > find_max_suggestions:
-                break
-
+global_find_target = []
+def GET_SCORE(keywords):
+    score = 0
+    c = 0
+    for word in keywords:
+        if word in global_find_target:
+            score +=25 
+        for global_word in global_find_target:
+            if word[0] == global_word[0]:
+                score+=5
+            if word[-1] == global_word[-1]:
+                score+=5
+        if c < len(global_find_target):
+            if keywords[c] == global_find_target[c]:
+                c2 = 0
+                for let in keywords[c]:
+                    if c2 < len(global_find_target[c]):
+                        if let == global_find_target[c][c2]:
+                            score+=3
+                    c2+=1
+                score+=5
+            else:
+                score-=10
+        c+=1
+    score -= (len(keywords)-len(global_find_target))*10
+    return score
 
 def FIND_cmd():
     print("Finding matches..") 
@@ -350,10 +365,44 @@ def FIND_cmd():
             print(colors.red+missing+colors.reset)
 
     print("\nUnhit targets: "+str(len(target_files)))
+    
+    targets_processed = []
+    for target in target_files:
+        target_processed = [*target.split('_')]
+        targets_processed.append(target_processed)
 
     if len(source_files) > 0:
         for missing in source_files:
-            COMPARE(missing, target_files)
+            print(colors.red+missing) 
+            missing_processed = [*(missing.split('_'))]
+            filtered_missing = []
+            for keyword in missing_processed:
+                if len(keyword) > 0:
+                    filtered_missing.append(keyword)
+            missing_processed = filtered_missing
+            global global_find_target
+            global_find_target = missing_processed
+            sorted_targets = reversed(sorted(targets_processed,key=GET_SCORE))
+            count = 0 
+            print(colors.cyan,end="")
+            for sorted_target in sorted_targets:
+                reconstructed_name=""
+                c2 = 0
+                for keyword in sorted_target:
+                    reconstructed_name += keyword
+                    if c2 < len(sorted_target)-1:
+                        reconstructed_name +="_"
+                    c2+=1
+                print(" "*70+"Score: "+str(GET_SCORE(sorted_target)),end="",flush=True)
+                print("\r",end="",flush=True)
+                print(reconstructed_name)
+                
+                count +=1 
+                if count > 5:
+                    break
+            print()
+        print(colors.reset,"\n")
+
 
 normal_run = not (args.pull or args.target or args.build or args.zip or args.find or args.idk)
 
