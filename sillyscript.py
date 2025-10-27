@@ -1,5 +1,6 @@
 import subprocess, argparse, shutil, time, os, ctypes, zipfile, math
 import pathlib as pl
+import lib.sillyfuzzy as sillyfuzzy
 
 texpack_name = "SillyTex"
 
@@ -329,6 +330,7 @@ def GET_SCORE(keywords):
                 score-=10
         c+=1
     score -= (len(keywords)-len(global_find_target))*10
+    score -= sillyfuzzy.compare(''.join(global_find_target),''.join(keywords)) * 3
     return score
 
 def FIND_cmd():
