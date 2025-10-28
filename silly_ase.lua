@@ -1,23 +1,17 @@
-print("no hi")
-local lfs = require"lfs"
-print("no hi")
 
 local function lua_glob(path)
   local accumil = {}
   table.insert(accumil,path)
-  for file in lfs.dir(path) do
+  for _,file in pairs(app.fs.listFiles(path)) do
     if file ~= "." and file ~= ".." then
       local next_path = path..'/'..file
-      local attr = lfs.attributes (next_path)
-      if type(attr) ~= 'nil' then
-        if attr.mode == "directory" then
-          local returned_glob = lua_glob(next_path)
-          for key,value in pairs(returned_glob) do
-            table.insert(accumil, value)
-          end
-        else
-          table.insert(accumil, next_path)
+      if app.fs.isDirectory(next_path) then
+        local returned_glob = lua_glob(next_path)
+        for key,value in pairs(returned_glob) do
+          table.insert(accumil, value)
         end
+      else
+        table.insert(accumil, next_path)
       end
     end
   end
@@ -25,7 +19,7 @@ local function lua_glob(path)
 end
 
 local function absolute_path(string)
-  return lfs.currentdir()..'/'..string
+  return app.fs.currentPath..'/'..string
 end
 
 local function string_to_table(string)
@@ -69,8 +63,7 @@ end
 local function cluster_files(files_in_folder)
   local folders = {}
   for _,value in pairs(files_in_folder) do
-    local attr = lfs.attributes(value)
-    if attr.mode ~= "directory" then
+    if not app.fs.isDirectory(value) then
       local key = get_parent(value)
       local elements = folders[key]
       if elements == nil then
@@ -88,6 +81,6 @@ local function cluster_files(files_in_folder)
   end
 end
 
-
 local files = lua_glob("renamed")
 cluster_files(files)
+print('done')
