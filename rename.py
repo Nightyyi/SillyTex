@@ -1,7 +1,7 @@
-import subprocess, argparse, shutil, time, os, ctypes, zipfile
+import subprocess, argparse, shutil, time, os, ctypes, zipfile, math
+import PIL
 from PIL import Image
 import pathlib as pl
-import lua
 
 parser = argparse.ArgumentParser(
                     prog='ProgramName',
@@ -10,9 +10,6 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-f', '--folder')
 args = parser.parse_args()
-
-
-
 
 path = pl.Path(args.folder) 
 
@@ -32,21 +29,41 @@ for file in path.rglob('**/*'):
                 size = img.size
                 subfolder = "x"+str(img.size[0]) +"_y"+ str(img.size[1])
             key = str(size[0])+"-"+str(size[1])
-            count = size_count.get(key,0) 
-            dest_folder = pl.Path("renamed/"+subfolder)
-            if not dest_folder.is_dir(): 
-                dest_folder.mkdir()
+            
+            files_list[size] = files_list.get(size,[])+[file]
 
-            dest = "renamed/"+subfolder+"/texture_"+str(count)+".aseprite"
-            shutil.copyfile(src=file, dst= dest)
-            print(file.name," -> ",str(count)+"-texture")
-            ref_line = str(count)+" - '"+file.stem+"'\n"
-            files_list[size] = files_list.get(size,"")+ref_line
-            size_count[key] = count + 1
-    
 for key in files_list:
-    subfolder = "x"+str(key[0]) +"_y"+ str(key[1])
-    with open('renamed/'+subfolder+"/ref.txt",'w') as ref_file:
-        ref_file.write(files_list[key])
+    print(key)
+    amount = len(files_list[key])
+    subfolder = "renamed/x"+str(key[0]) +"_y"+ str(key[1])
+    if not pl.Path(subfolder).is_dir(): 
+        pl.Path(subfolder).mkdir()
+
+    y_length = math.ceil(math.sqrt(amount))
+    x_length = math.ceil(amount/y_length)
+    x = x_length * key[0]
+    y = y_length * key[1]
+
+    im = Image.new(mode="RGBA",size=[x,y],color=(0,0,0,0))
+    x_iter = 0
+    y_iter = 0
+    for file in files_list[key]:
+        im_2 = Image.open(file)
+        im.paste(im_2,(x_iter,y_iter))
+        x_iter += key[0]
+        if x_iter == x:
+            x_iter = 0
+            y_iter += key[0]
+    im.save(subfolder+"/x"+str(x)+'_y'+str(y)+".png")
+
+
+    print(len(files_list[key]),str(x_length)+"x"+str(y_length))
+
+    with open(subfolder+"/ref.txt",'w') as ref_file:
+        for file in files_list[key]:
+            ref_file.write(file.name+"\n")
+
+
+
 
 
