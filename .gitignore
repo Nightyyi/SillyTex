@@ -1,3 +1,4 @@
 *.pyc
+script_data/config.json
 GTOCore
 GregTech-Modern

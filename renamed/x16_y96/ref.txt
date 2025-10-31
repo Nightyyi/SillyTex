@@ -1,3 +1,0 @@
-gem_exquisite.png
-gem_exquisite_overlay.png
-gem_exquisite_secondary.png

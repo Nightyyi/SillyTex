@@ -193,8 +193,8 @@ local function clump_2(files)
         local x_iter = 0
         local y_iter = 0
         local count = 0
-
-        local ref_path = (get_parent(value)..'/ref.txt')
+        print(value)
+        local ref_path = (get_parent(value)..'/'..get_basename(value)..'.txt')
         local ref_strings = {}
         for line in io.lines(ref_path) do
           local accumil = ""
@@ -224,7 +224,7 @@ local function clump_2(files)
           end
         end
         print(1)
-        sprite:saveAs('renamed'..'/x'..x_cell..'_y'..y_cell..'/'..x..'_'..y..'.aseprite')
+        sprite:saveAs('renamed'..'/x'..x_cell..'_y'..y_cell..'/'..get_basename(value)..'.aseprite')
         print(2)
       end
     end
